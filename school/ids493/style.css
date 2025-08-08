@@ -73,6 +73,14 @@ h2 {
   transition: transform 0.2s;
 }
 
+.card img {
+  width: 100%;       /* make it span the full width of the card */
+  height: auto;      /* keep the correct aspect ratio */
+  border-radius: 8px; /* optional rounded corners to match the card style */
+  margin-top: 1rem;   /* space above the image */
+  display: block;     /* removes any extra bottom spacing */
+}
+
 .card:hover {
   transform: translateY(-5px);
 }
