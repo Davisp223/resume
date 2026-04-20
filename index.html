@@ -1,0 +1,855 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Davis Plude | Network Engineer</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0c0f;
+      --surface: #111318;
+      --border: #1e2229;
+      --accent: #00e5ff;
+      --accent2: #ff6b35;
+      --text: #e8eaf0;
+      --muted: #5a6070;
+      --mono: 'Space Mono', monospace;
+      --sans: 'Syne', sans-serif;
+    }
+
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--sans);
+      overflow-x: hidden;
+    }
+
+    /* NOISE OVERLAY */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+      pointer-events: none;
+      z-index: 9999;
+      opacity: 0.4;
+    }
+
+    /* NAV */
+    nav {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.2rem 3rem;
+      background: rgba(10, 12, 15, 0.85);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid var(--border);
+    }
+
+    .nav-logo {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      color: var(--accent);
+      letter-spacing: 0.1em;
+      text-decoration: none;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 2.5rem;
+      list-style: none;
+    }
+
+    .nav-links a {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-decoration: none;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover { color: var(--accent); }
+
+    /* HERO */
+    #hero {
+      min-height: 100vh;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      align-items: center;
+      padding: 8rem 3rem 4rem;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #hero::after {
+      content: '';
+      position: absolute;
+      right: -200px;
+      top: 50%;
+      transform: translateY(-50%);
+      width: 600px;
+      height: 600px;
+      background: radial-gradient(circle, rgba(0,229,255,0.06) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-eyebrow {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      color: var(--accent);
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      margin-bottom: 1.5rem;
+      opacity: 0;
+      animation: fadeUp 0.6s ease forwards 0.2s;
+    }
+
+    .hero-name {
+      font-size: clamp(3.5rem, 7vw, 6rem);
+      font-weight: 800;
+      line-height: 0.95;
+      letter-spacing: -0.02em;
+      margin-bottom: 1.5rem;
+      opacity: 0;
+      animation: fadeUp 0.6s ease forwards 0.35s;
+    }
+
+    .hero-name span {
+      color: var(--accent);
+      display: block;
+    }
+
+    .hero-desc {
+      font-family: var(--mono);
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.8;
+      max-width: 420px;
+      margin-bottom: 2.5rem;
+      opacity: 0;
+      animation: fadeUp 0.6s ease forwards 0.5s;
+    }
+
+    .hero-cta {
+      display: flex;
+      gap: 1rem;
+      opacity: 0;
+      animation: fadeUp 0.6s ease forwards 0.65s;
+    }
+
+    .btn {
+      font-family: var(--mono);
+      font-size: 0.75rem;
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      padding: 0.85rem 1.8rem;
+      text-decoration: none;
+      border: 1px solid;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: var(--accent);
+      color: var(--bg);
+      border-color: var(--accent);
+    }
+
+    .btn-primary:hover {
+      background: transparent;
+      color: var(--accent);
+    }
+
+    .btn-ghost {
+      background: transparent;
+      color: var(--text);
+      border-color: var(--border);
+    }
+
+    .btn-ghost:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .hero-right {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      opacity: 0;
+      animation: fadeIn 1s ease forwards 0.8s;
+    }
+
+    /* Hexagonal grid decoration */
+    .hex-grid {
+      position: relative;
+      width: 320px;
+      height: 320px;
+    }
+
+    .hex-ring {
+      position: absolute;
+      border: 1px solid var(--border);
+      border-radius: 50%;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      animation: spin linear infinite;
+    }
+
+    .hex-ring:nth-child(1) { width: 100px; height: 100px; border-color: rgba(0,229,255,0.3); animation-duration: 8s; }
+    .hex-ring:nth-child(2) { width: 180px; height: 180px; border-color: rgba(0,229,255,0.15); animation-duration: 12s; animation-direction: reverse; }
+    .hex-ring:nth-child(3) { width: 260px; height: 260px; border-color: rgba(0,229,255,0.07); animation-duration: 20s; }
+    .hex-ring:nth-child(4) { width: 320px; height: 320px; border-color: rgba(0,229,255,0.04); animation-duration: 30s; animation-direction: reverse; }
+
+    .hex-center {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 60px;
+      height: 60px;
+      background: var(--accent);
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      color: var(--bg);
+      font-weight: 700;
+      letter-spacing: 0.05em;
+      box-shadow: 0 0 40px rgba(0,229,255,0.4);
+    }
+
+    .hex-dot {
+      position: absolute;
+      width: 6px;
+      height: 6px;
+      background: var(--accent);
+      border-radius: 50%;
+      top: 50%;
+      left: 50%;
+      margin: -3px 0 0 -3px;
+    }
+
+    .ring-dot {
+      position: absolute;
+      width: 5px;
+      height: 5px;
+      background: var(--accent2);
+      border-radius: 50%;
+      top: -2.5px;
+      left: 50%;
+      margin-left: -2.5px;
+    }
+
+    /* STATUS BAR */
+    .status-bar {
+      background: var(--surface);
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+      padding: 0.75rem 3rem;
+      display: flex;
+      gap: 3rem;
+      overflow: hidden;
+    }
+
+    .status-item {
+      display: flex;
+      align-items: center;
+      gap: 0.6rem;
+      font-family: var(--mono);
+      font-size: 0.72rem;
+      color: var(--muted);
+      white-space: nowrap;
+    }
+
+    .status-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--accent);
+      animation: pulse 2s ease infinite;
+    }
+
+    /* SECTIONS */
+    section {
+      padding: 6rem 3rem;
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+
+    .section-label {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 0.75rem;
+    }
+
+    .section-title {
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 800;
+      letter-spacing: -0.02em;
+      margin-bottom: 3rem;
+    }
+
+    /* ABOUT */
+    .about-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      align-items: start;
+    }
+
+    .about-text p {
+      font-size: 1rem;
+      line-height: 1.8;
+      color: #b0b8c8;
+      margin-bottom: 1.2rem;
+    }
+
+    .about-photo {
+      position: relative;
+    }
+
+    .about-photo img {
+      width: 100%;
+      aspect-ratio: 4/5;
+      object-fit: cover;
+      filter: grayscale(30%) contrast(1.1);
+      border: 1px solid var(--border);
+    }
+
+    .about-photo::before {
+      content: '';
+      position: absolute;
+      inset: -8px -8px 8px 8px;
+      border: 1px solid rgba(0,229,255,0.2);
+      pointer-events: none;
+    }
+
+    .tag-list {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      margin-top: 1.5rem;
+    }
+
+    .tag {
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      padding: 0.35rem 0.75rem;
+      border: 1px solid var(--border);
+      color: var(--muted);
+      letter-spacing: 0.05em;
+    }
+
+    .tag:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    /* RESUME */
+    #resume {
+      max-width: 1100px;
+    }
+
+    .resume-embed {
+      width: 100%;
+      height: 700px;
+      border: 1px solid var(--border);
+      background: var(--surface);
+    }
+
+    .resume-download {
+      margin-top: 1.5rem;
+      display: flex;
+      justify-content: flex-end;
+    }
+
+    /* PROJECTS */
+    .project-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+    }
+
+    .project-card {
+      background: var(--surface);
+      padding: 2rem;
+      transition: background 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .project-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 2px;
+      background: var(--accent);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.3s;
+    }
+
+    .project-card:hover::before { transform: scaleX(1); }
+    .project-card:hover { background: #141820; }
+
+    .project-num {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      color: var(--accent);
+      letter-spacing: 0.15em;
+      margin-bottom: 1rem;
+    }
+
+    .project-card h3 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 0.75rem;
+      letter-spacing: -0.01em;
+    }
+
+    .project-card p {
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.7;
+    }
+
+    .project-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.4rem;
+      margin-top: 1.25rem;
+    }
+
+    .project-tag {
+      font-family: var(--mono);
+      font-size: 0.6rem;
+      padding: 0.2rem 0.5rem;
+      background: rgba(0,229,255,0.06);
+      color: var(--accent);
+      border: 1px solid rgba(0,229,255,0.15);
+      letter-spacing: 0.05em;
+    }
+
+    /* CERTIFICATIONS */
+    .cert-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1rem;
+    }
+
+    .cert-item {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      padding: 1.2rem 1.5rem;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      text-decoration: none;
+      color: var(--text);
+      transition: all 0.2s;
+    }
+
+    .cert-item:hover {
+      border-color: var(--accent);
+      background: rgba(0,229,255,0.04);
+    }
+
+    .cert-icon {
+      font-size: 1.2rem;
+      flex-shrink: 0;
+    }
+
+    .cert-name {
+      font-size: 0.9rem;
+      font-weight: 600;
+    }
+
+    .cert-issuer {
+      font-family: var(--mono);
+      font-size: 0.65rem;
+      color: var(--muted);
+      margin-top: 0.2rem;
+    }
+
+    .cert-arrow {
+      margin-left: auto;
+      color: var(--muted);
+      font-size: 0.8rem;
+      transition: color 0.2s;
+    }
+
+    .cert-item:hover .cert-arrow { color: var(--accent); }
+
+    /* CONTACT */
+    .contact-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 4rem;
+      align-items: start;
+    }
+
+    .contact-text p {
+      font-size: 1rem;
+      color: #b0b8c8;
+      line-height: 1.8;
+      margin-bottom: 2rem;
+    }
+
+    .contact-links {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    .contact-link {
+      display: flex;
+      align-items: center;
+      gap: 1rem;
+      font-family: var(--mono);
+      font-size: 0.8rem;
+      color: var(--muted);
+      text-decoration: none;
+      padding: 1rem 1.25rem;
+      border: 1px solid var(--border);
+      transition: all 0.2s;
+    }
+
+    .contact-link:hover {
+      border-color: var(--accent);
+      color: var(--accent);
+    }
+
+    .contact-link-label {
+      font-size: 0.65rem;
+      color: var(--accent);
+      display: block;
+      letter-spacing: 0.1em;
+      margin-bottom: 0.2rem;
+      text-transform: uppercase;
+    }
+
+    .contact-link-value {
+      color: var(--text);
+      font-size: 0.85rem;
+    }
+
+    /* FOOTER */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 2rem 3rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-family: var(--mono);
+      font-size: 0.7rem;
+      color: var(--muted);
+    }
+
+    /* ANIMATIONS */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes spin {
+      from { transform: translate(-50%, -50%) rotate(0deg); }
+      to { transform: translate(-50%, -50%) rotate(360deg); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.3; }
+    }
+
+    /* DIVIDER */
+    .divider {
+      border: none;
+      border-top: 1px solid var(--border);
+      max-width: 1100px;
+      margin: 0 auto;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- NAV -->
+  <nav>
+    <a href="#hero" class="nav-logo">DP://</a>
+    <ul class="nav-links">
+      <li><a href="#about">About</a></li>
+      <li><a href="#resume">Resume</a></li>
+      <li><a href="#projects">Projects</a></li>
+      <li><a href="#certifications">Certs</a></li>
+      <li><a href="#contact">Contact</a></li>
+    </ul>
+  </nav>
+
+  <!-- HERO -->
+  <section id="hero" style="max-width:none; padding-top:8rem;">
+    <div style="max-width:1100px; margin:0 auto; display:grid; grid-template-columns:1fr 1fr; align-items:center; gap:4rem;">
+      <div>
+        <p class="hero-eyebrow">// Network Engineer & Systems Specialist</p>
+        <h1 class="hero-name">Davis<span>Plude.</span></h1>
+        <p class="hero-desc">
+          Cybersecurity grad. Navy contract networking. RF enthusiast.<br/>
+          I build things — from shipboard tagout systems to custom radios<br/>
+          to underwater ROVs. Always something in progress.
+        </p>
+        <div class="hero-cta">
+          <a href="#contact" class="btn btn-primary">Get In Touch</a>
+          <a href="Davis_Plude_Resume_April_2026.pdf" target="_blank" class="btn btn-ghost">Download CV</a>
+        </div>
+      </div>
+      <div class="hero-right">
+        <div class="hex-grid">
+          <div class="hex-ring"><div class="ring-dot"></div></div>
+          <div class="hex-ring"><div class="ring-dot"></div></div>
+          <div class="hex-ring"><div class="ring-dot"></div></div>
+          <div class="hex-ring"><div class="ring-dot"></div></div>
+          <div class="hex-center">VB/VA</div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- STATUS BAR -->
+  <div class="status-bar">
+    <div class="status-item"><span class="status-dot"></span>CCNA Certified</div>
+    <div class="status-item"><span class="status-dot"></span>CompTIA Security+ / Network+</div>
+    <div class="status-item"><span class="status-dot"></span>B.S. Cybersecurity — ODU 2025</div>
+    <div class="status-item"><span class="status-dot"></span>FCC HAM Technician</div>
+    <div class="status-item"><span class="status-dot"></span>Eagle Scout</div>
+    <div class="status-item"><span class="status-dot"></span>Virginia Beach, VA</div>
+  </div>
+
+  <hr class="divider">
+
+  <!-- ABOUT -->
+  <section id="about">
+    <p class="section-label">// 01 — About</p>
+    <h2 class="section-title">Who I Am</h2>
+    <div class="about-grid">
+      <div class="about-text">
+        <p>
+          I'm Davis — a network engineer and cybersecurity specialist based in Virginia Beach. 
+          My day job involves working on Navy shipboard networks and enterprise WiFi deployments, 
+          and my nights usually involve whatever project has my attention that week.
+        </p>
+        <p>
+          I've got a deep interest in RF and radio engineering — from HAM radio and SDR work 
+          to designing my own VHF hardware from scratch. There's something satisfying about 
+          getting a signal where it shouldn't be able to go.
+        </p>
+        <p>
+          Outside of the technical side, I'm usually hunting, shooting, or out in the field. 
+          Eagle Scout background means I still think in terms of systems and preparation — 
+          habits that translate directly into how I approach infrastructure problems.
+        </p>
+        <div class="tag-list">
+          <span class="tag">Cisco / Juniper</span>
+          <span class="tag">Fortinet</span>
+          <span class="tag">RF / HAM Radio</span>
+          <span class="tag">Navy Networks</span>
+          <span class="tag">MDT / WDS</span>
+          <span class="tag">PowerShell</span>
+          <span class="tag">Linux</span>
+          <span class="tag">SCADA</span>
+          <span class="tag">SDR</span>
+          <span class="tag">TrueNAS</span>
+        </div>
+      </div>
+      <div class="about-photo">
+        <img src="headshot.png" alt="Davis Plude" />
+      </div>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- RESUME -->
+  <section id="resume" style="max-width:1100px;">
+    <p class="section-label">// 02 — Resume</p>
+    <h2 class="section-title">Experience</h2>
+    <iframe class="resume-embed" src="Davis_Plude_Resume_April_2026.pdf" loading="lazy"></iframe>
+    <div class="resume-download">
+      <a href="Davis_Plude_Resume_April_2026.pdf" target="_blank" class="btn btn-primary">Download PDF</a>
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- PROJECTS -->
+  <section id="projects">
+    <p class="section-label">// 03 — Projects</p>
+    <h2 class="section-title">What I'm Building</h2>
+    <div class="project-grid">
+
+      <div class="project-card">
+        <p class="project-num">01 / RF</p>
+        <h3>Custom VHF Radio</h3>
+        <p>Designing a trunking-capable handheld from the ground up — FPP, hardware encryption, OTA programming, and CHIRP compatibility. Goal is a purpose-built radio that doesn't exist off the shelf.</p>
+        <div class="project-tags">
+          <span class="project-tag">RF Design</span>
+          <span class="project-tag">Embedded</span>
+          <span class="project-tag">HAM</span>
+          <span class="project-tag">Trunking</span>
+        </div>
+      </div>
+
+      <div class="project-card">
+        <p class="project-num">02 / INFRA</p>
+        <h3>Self-Hosted Dashboard</h3>
+        <p>Internal web tool built on PocketBase and React. Centralizes password management, network diagrams, and monitoring utilities. Served behind Nginx Proxy Manager with Cloudflare tunneling.</p>
+        <div class="project-tags">
+          <span class="project-tag">PocketBase</span>
+          <span class="project-tag">React</span>
+          <span class="project-tag">Nginx</span>
+          <span class="project-tag">Docker</span>
+        </div>
+      </div>
+
+      <div class="project-card">
+        <p class="project-num">03 / HARDWARE</p>
+        <h3>DIY Tethered ROV</h3>
+        <p>Raspberry Pi–based underwater ROV with swiveling thruster pods, Ethernet control link, leak detection sensors, and planned IMU-based auto-leveling. Built for shallow-water inspection.</p>
+        <div class="project-tags">
+          <span class="project-tag">Raspberry Pi</span>
+          <span class="project-tag">Python</span>
+          <span class="project-tag">Embedded</span>
+          <span class="project-tag">CAD</span>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- CERTIFICATIONS -->
+  <section id="certifications">
+    <p class="section-label">// 04 — Certifications</p>
+    <h2 class="section-title">Credentials</h2>
+    <div class="cert-grid">
+
+      <a href="certs/CompTIA Security+ ce certificate.pdf" target="_blank" class="cert-item">
+        <span class="cert-icon">🔒</span>
+        <div>
+          <div class="cert-name">CompTIA Security+</div>
+          <div class="cert-issuer">CompTIA — Active</div>
+        </div>
+        <span class="cert-arrow">↗</span>
+      </a>
+
+      <a href="certs/CompTIA Network+ ce certificate.pdf" target="_blank" class="cert-item">
+        <span class="cert-icon">🌐</span>
+        <div>
+          <div class="cert-name">CompTIA Network+</div>
+          <div class="cert-issuer">CompTIA — Active</div>
+        </div>
+        <span class="cert-arrow">↗</span>
+      </a>
+
+      <a href="certs/Cisco Certified Network Associate certificate.pdf" target="_blank" class="cert-item">
+        <span class="cert-icon">⚡</span>
+        <div>
+          <div class="cert-name">Cisco CCNA</div>
+          <div class="cert-issuer">Cisco Systems — Active</div>
+        </div>
+        <span class="cert-arrow">↗</span>
+      </a>
+
+      <div class="cert-item" style="cursor:default;">
+        <span class="cert-icon">📡</span>
+        <div>
+          <div class="cert-name">FCC Amateur Radio License</div>
+          <div class="cert-issuer">Federal Communications Commission — Technician Class</div>
+        </div>
+      </div>
+
+      <div class="cert-item" style="cursor:default;">
+        <span class="cert-icon">🛡️</span>
+        <div>
+          <div class="cert-name">Cisco Certified Support Technician: Cybersecurity</div>
+          <div class="cert-issuer">Cisco Systems</div>
+        </div>
+      </div>
+
+      <div class="cert-item" style="cursor:default;">
+        <span class="cert-icon">⚠️</span>
+        <div>
+          <div class="cert-name">OSHA 10-Hour General Industry</div>
+          <div class="cert-issuer">OSHA</div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+  <hr class="divider">
+
+  <!-- CONTACT -->
+  <section id="contact">
+    <p class="section-label">// 05 — Contact</p>
+    <h2 class="section-title">Get In Touch</h2>
+    <div class="contact-grid">
+      <div class="contact-text">
+        <p>
+          Open to contract work, consulting, and the right full-time opportunities — 
+          especially in DoD networking, RF/communications, or infrastructure roles.
+          Feel free to reach out directly.
+        </p>
+        <a href="Davis_Plude_Resume_April_2026.pdf" target="_blank" class="btn btn-ghost">Download Resume</a>
+      </div>
+      <div class="contact-links">
+        <a href="mailto:davis@plude.us" class="contact-link">
+          <div>
+            <span class="contact-link-label">Email</span>
+            <span class="contact-link-value">davis@plude.us</span>
+          </div>
+          <span style="margin-left:auto; color:var(--muted);">↗</span>
+        </a>
+        <a href="https://www.linkedin.com/in/davis-plude" target="_blank" class="contact-link">
+          <div>
+            <span class="contact-link-label">LinkedIn</span>
+            <span class="contact-link-value">linkedin.com/in/davis-plude</span>
+          </div>
+          <span style="margin-left:auto; color:var(--muted);">↗</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <footer>
+    <span>© 2026 Davis Plude</span>
+    <span style="color:var(--accent);">Virginia Beach, VA</span>
+  </footer>
+
+</body>
+</html>
