@@ -89,6 +89,28 @@
   section{display:none;}
   section.active{display:block;}
 
+  .plan-progress{
+    font-family: var(--font-mono);
+    font-size: 0.78rem;
+    color: var(--text-dim);
+    margin-bottom: 12px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+  }
+  .plan-progress .pp-track{
+    flex:1;
+    height:6px;
+    background: var(--panel);
+    border-radius:3px;
+    margin: 0 10px;
+    overflow:hidden;
+  }
+  .plan-progress .pp-fill{
+    height:100%;
+    background: var(--moss);
+  }
+
   /* PLAN TAB */
   .week-card{
     background: var(--panel);
@@ -96,16 +118,52 @@
     border-radius: 8px;
     margin-bottom: 10px;
     overflow: hidden;
+    transition: opacity 0.2s;
+  }
+  .week-card.completed{
+    border-color: var(--moss-dim);
   }
   .week-head{
     display:flex; justify-content:space-between; align-items:center;
     padding: 13px 15px;
     cursor: pointer;
+    gap: 10px;
+  }
+  .week-checkbox{
+    flex-shrink:0;
+    width: 22px;
+    height: 22px;
+    border-radius: 5px;
+    border: 2px solid var(--line);
+    background: var(--bg);
+    display:flex; align-items:center; justify-content:center;
+    cursor: pointer;
+    transition: background 0.15s, border-color 0.15s;
+  }
+  .week-checkbox.checked{
+    background: var(--moss-dim);
+    border-color: var(--moss);
+  }
+  .week-checkbox svg{
+    width:13px; height:13px;
+    opacity:0;
+    transition: opacity 0.15s;
+  }
+  .week-checkbox.checked svg{opacity:1;}
+  .week-head-main{
+    flex:1;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    min-width:0;
   }
   .week-head .wk-label{
     font-family: var(--font-display);
     font-size: 1rem;
     font-weight: 700;
+  }
+  .week-card.completed .wk-label{
+    color: var(--moss);
   }
   .week-head .wk-meta{
     font-family: var(--font-mono);
@@ -295,10 +353,10 @@
 <div class="wrap">
   <header>
     <div>
-      <h1>10K Build</h1>
+      <h1>10K → Half Build</h1>
       <div class="sub">Tue/Thu vigorous · Sat long run · Wed &amp; Sun buffer</div>
     </div>
-    <div class="badge">SUB-60 TARGET</div>
+    <div class="badge">OPEN-ENDED</div>
   </header>
 
   <nav class="tabs">
@@ -306,7 +364,13 @@
     <button class="tab-btn" data-tab="log">Log</button>
   </nav>
 
-  <section id="plan" class="active"></section>
+  <section id="plan" class="active">
+    <div class="plan-progress">
+      <span id="pp-count">0 / 12 weeks</span>
+      <span class="pp-track"><span class="pp-fill" id="pp-fill" style="width:0%"></span></span>
+    </div>
+    <div id="plan-weeks"><div class="loading">Loading plan…</div></div>
+  </section>
 
   <section id="log">
     <div class="week-progress">
@@ -379,6 +443,18 @@ const PLAN = [
   {phase:"Peak", days:{Mon:2.0, Tue:3.5, Wed:1.0, Thu:3.5, Fri:2.0, Sat:8.0, Sun:0}},
   {phase:"Taper", days:{Mon:1.5, Tue:2.5, Wed:1.0, Thu:2.5, Fri:1.5, Sat:5.0, Sun:0}},
   {phase:"Race", days:{Mon:1.5, Tue:1.5, Wed:0, Thu:1.0, Fri:0, Sat:6.2, Sun:0}},
+  {phase:"Recovery", days:{Mon:1.5, Tue:2.0, Wed:1.0, Thu:2.0, Fri:1.5, Sat:5.0, Sun:0}},
+  {phase:"Half Build", days:{Mon:1.5, Tue:2.5, Wed:1.0, Thu:2.5, Fri:1.5, Sat:6.0, Sun:0}},
+  {phase:"Half Build", days:{Mon:2.0, Tue:2.5, Wed:1.0, Thu:2.5, Fri:2.0, Sat:7.0, Sun:0}},
+  {phase:"Deload", days:{Mon:1.5, Tue:2.0, Wed:1.0, Thu:2.0, Fri:1.5, Sat:5.0, Sun:0}},
+  {phase:"Half Build", days:{Mon:2.0, Tue:3.0, Wed:1.0, Thu:3.0, Fri:2.0, Sat:7.5, Sun:0}},
+  {phase:"Half Build", days:{Mon:2.0, Tue:3.0, Wed:1.0, Thu:3.0, Fri:2.0, Sat:8.5, Sun:0}},
+  {phase:"Half Build", days:{Mon:2.0, Tue:3.5, Wed:1.0, Thu:3.5, Fri:2.0, Sat:9.5, Sun:0}},
+  {phase:"Deload", days:{Mon:1.5, Tue:2.5, Wed:1.0, Thu:2.5, Fri:1.5, Sat:6.0, Sun:0}},
+  {phase:"Half Build", days:{Mon:2.0, Tue:3.5, Wed:1.0, Thu:3.5, Fri:2.0, Sat:10.0, Sun:0}},
+  {phase:"Half Build", days:{Mon:2.0, Tue:3.5, Wed:1.0, Thu:3.5, Fri:2.0, Sat:10.5, Sun:0}},
+  {phase:"Half Build", days:{Mon:2.0, Tue:3.5, Wed:1.0, Thu:3.5, Fri:2.0, Sat:11.0, Sun:0}},
+  {phase:"Half Ready", days:{Mon:1.5, Tue:2.5, Wed:1.0, Thu:2.5, Fri:1.5, Sat:7.0, Sun:0}},
 ];
 
 const DAY_TYPE = {
@@ -400,24 +476,79 @@ const RACE_WEEK_OVERRIDES = {
   Sun:"Off / recovery walk"
 };
 
-function renderPlan(){
-  const container = document.getElementById('plan');
+const CHECK_SVG = `<svg viewBox="0 0 24 24" fill="none" stroke="#E8E6DA" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>`;
+
+let completedWeeks = [];
+
+async function loadCompleted(){
+  try{
+    const res = await window.storage.get('completedWeeks', false);
+    return res ? JSON.parse(res.value) : [];
+  }catch(e){
+    return [];
+  }
+}
+async function saveCompleted(list){
+  try{
+    await window.storage.set('completedWeeks', JSON.stringify(list), false);
+  }catch(e){
+    console.error('save failed', e);
+  }
+}
+
+function updatePlanProgress(){
+  const count = completedWeeks.length;
+  document.getElementById('pp-count').textContent = `${count} / ${PLAN.length} weeks`;
+  document.getElementById('pp-fill').style.width = (count/PLAN.length*100)+'%';
+}
+
+async function toggleWeek(weekNum){
+  const idx = completedWeeks.indexOf(weekNum);
+  if(idx === -1){
+    completedWeeks.push(weekNum);
+  }else{
+    completedWeeks.splice(idx,1);
+  }
+  await saveCompleted(completedWeeks);
+  updatePlanProgress();
+}
+
+async function renderPlan(){
+  completedWeeks = await loadCompleted();
+  const container = document.getElementById('plan-weeks');
   container.innerHTML = '';
   PLAN.forEach((wk, i) => {
     const weekNum = i+1;
     const total = Object.values(wk.days).reduce((a,b)=>a+b,0);
+    const isDone = completedWeeks.includes(weekNum);
+
     const card = document.createElement('div');
-    card.className = 'week-card';
+    card.className = 'week-card' + (isDone ? ' completed' : '');
 
     const head = document.createElement('div');
     head.className = 'week-head';
-    head.innerHTML = `
+
+    const checkbox = document.createElement('div');
+    checkbox.className = 'week-checkbox' + (isDone ? ' checked' : '');
+    checkbox.innerHTML = CHECK_SVG;
+    checkbox.addEventListener('click', async (e)=>{
+      e.stopPropagation();
+      await toggleWeek(weekNum);
+      const nowDone = completedWeeks.includes(weekNum);
+      checkbox.classList.toggle('checked', nowDone);
+      card.classList.toggle('completed', nowDone);
+    });
+
+    const headMain = document.createElement('div');
+    headMain.className = 'week-head-main';
+    headMain.innerHTML = `
       <div>
         <span class="wk-label">Week ${weekNum}</span>
         <span class="wk-phase">${wk.phase}</span>
       </div>
-      <div class="wk-meta">${total.toFixed(1)} mi<span class="wk-phase" style="text-align:right;">${weekNum===12? 'race week' : 'long run '+wk.days.Sat+'mi'}</span></div>
+      <div class="wk-meta">${total.toFixed(1)} mi<span class="wk-phase" style="text-align:right;">${weekNum===12? 'race week (10K)' : 'long run '+wk.days.Sat+'mi'}</span></div>
     `;
+
     const body = document.createElement('div');
     body.className = 'week-body';
 
@@ -435,22 +566,27 @@ function renderPlan(){
       body.appendChild(row);
     });
 
-    head.addEventListener('click', ()=>{
+    headMain.addEventListener('click', ()=>{
       body.classList.toggle('open');
     });
 
+    head.appendChild(checkbox);
+    head.appendChild(headMain);
     card.appendChild(head);
     card.appendChild(body);
     container.appendChild(card);
   });
-  // open week 1 by default
-  const firstBody = container.querySelector('.week-body');
-  if(firstBody) firstBody.classList.add('open');
+  const firstOpenIdx = PLAN.findIndex((_, i) => !completedWeeks.includes(i+1));
+  const targetIdx = firstOpenIdx === -1 ? 0 : firstOpenIdx;
+  const bodies = container.querySelectorAll('.week-body');
+  if(bodies[targetIdx]) bodies[targetIdx].classList.add('open');
+
+  updatePlanProgress();
 }
 
 function populateWeekSelect(){
   const sel = document.getElementById('f-week');
-  for(let i=1;i<=12;i++){
+  for(let i=1;i<=PLAN.length;i++){
     const opt = document.createElement('option');
     opt.value = i;
     opt.textContent = `Week ${i}`;
@@ -458,7 +594,6 @@ function populateWeekSelect(){
   }
 }
 
-// Tabs
 document.querySelectorAll('.tab-btn').forEach(btn=>{
   btn.addEventListener('click', ()=>{
     document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
@@ -469,7 +604,6 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
   });
 });
 
-// Storage
 async function loadEntries(){
   try{
     const res = await window.storage.get('entries', false);
@@ -497,7 +631,6 @@ async function refreshLog(){
   const entries = await loadEntries();
   entries.sort((a,b)=> new Date(b.date) - new Date(a.date));
 
-  // progress: use most recent entry's week, or week 1 if none
   const activeWeek = entries.length ? Math.max(...entries.map(e=>parseInt(e.week))) : 1;
   const weekEntries = entries.filter(e=>parseInt(e.week) === activeWeek);
   const sum = weekEntries.reduce((a,e)=>a+parseFloat(e.dist||0),0);
@@ -578,7 +711,6 @@ document.getElementById('submit-entry').addEventListener('click', async ()=>{
   refreshLog();
 });
 
-// init
 renderPlan();
 populateWeekSelect();
 document.getElementById('f-date').valueAsDate = new Date();
