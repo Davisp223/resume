@@ -382,6 +382,18 @@
     </div>
 
     <div class="log-form">
+      <h2>Sync across devices</h2>
+      <p style="font-size:0.8rem;color:var(--text-dim);margin-bottom:10px;line-height:1.4;">Export a CSV backup on this device, then move the file over (email, iCloud/Drive, AirDrop) and import it on the other. This is manual — GitHub Pages can't run a live sync between devices.</p>
+      <div class="field-row" style="margin-bottom:0;">
+        <button class="submit-btn" id="export-csv" style="margin-top:0;">Export CSV</button>
+        <label class="submit-btn" style="margin-top:0;text-align:center;cursor:pointer;background:var(--panel-2);border:1px solid var(--moss-dim);">
+          Import CSV
+          <input type="file" id="import-csv" accept=".csv" style="display:none;">
+        </label>
+      </div>
+    </div>
+
+    <div class="log-form">
       <h2>Log a run</h2>
       <div class="field-row">
         <div class="field">
@@ -482,15 +494,15 @@ let completedWeeks = [];
 
 async function loadCompleted(){
   try{
-    const res = await window.storage.get('completedWeeks', false);
-    return res ? JSON.parse(res.value) : [];
+    const raw = localStorage.getItem('completedWeeks');
+    return raw ? JSON.parse(raw) : [];
   }catch(e){
     return [];
   }
 }
 async function saveCompleted(list){
   try{
-    await window.storage.set('completedWeeks', JSON.stringify(list), false);
+    localStorage.setItem('completedWeeks', JSON.stringify(list));
   }catch(e){
     console.error('save failed', e);
   }
@@ -606,15 +618,15 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
 
 async function loadEntries(){
   try{
-    const res = await window.storage.get('entries', false);
-    return res ? JSON.parse(res.value) : [];
+    const raw = localStorage.getItem('entries');
+    return raw ? JSON.parse(raw) : [];
   }catch(e){
     return [];
   }
 }
 async function saveEntries(entries){
   try{
-    await window.storage.set('entries', JSON.stringify(entries), false);
+    localStorage.setItem('entries', JSON.stringify(entries));
   }catch(e){
     console.error('save failed', e);
   }
@@ -679,6 +691,98 @@ function escapeHtml(str){
   d.textContent = str;
   return d.innerHTML;
 }
+
+// CSV sync
+function csvEscape(val){
+  val = String(val ?? '');
+  if(/[",\n]/.test(val)){
+    val = '"' + val.replace(/"/g,'""') + '"';
+  }
+  return val;
+}
+function toCSV(entries, completed){
+  const rows = [['record_type','week','day','date','dist','hr','pace','note']];
+  entries.forEach(e=>{
+    rows.push(['run', e.week, e.day, e.date||'', e.dist||'', e.hr||'', e.pace||'', e.note||'']);
+  });
+  completed.forEach(w=>{
+    rows.push(['week_complete', w, '', '', '', '', '', '']);
+  });
+  return rows.map(r => r.map(csvEscape).join(',')).join('\n');
+}
+function parseCSVLine(line){
+  const result = [];
+  let cur = '';
+  let inQuotes = false;
+  for(let i=0;i<line.length;i++){
+    const c = line[i];
+    if(inQuotes){
+      if(c === '"'){
+        if(line[i+1] === '"'){ cur+='"'; i++; }
+        else { inQuotes = false; }
+      } else { cur += c; }
+    } else {
+      if(c === '"'){ inQuotes = true; }
+      else if(c === ','){ result.push(cur); cur=''; }
+      else { cur += c; }
+    }
+  }
+  result.push(cur);
+  return result;
+}
+function fromCSV(text){
+  const lines = text.split(/\r?\n/).filter(l=>l.length>0);
+  const rows = lines.map(parseCSVLine);
+  const header = rows[0];
+  const entries = [];
+  const completed = [];
+  for(let i=1;i<rows.length;i++){
+    const r = rows[i];
+    const obj = {};
+    header.forEach((h,idx)=> obj[h] = r[idx]);
+    if(obj.record_type === 'run'){
+      entries.push({
+        id: Date.now().toString()+Math.random().toString(36).slice(2),
+        week: obj.week, day: obj.day, date: obj.date,
+        dist: obj.dist, hr: obj.hr, pace: obj.pace, note: obj.note
+      });
+    } else if(obj.record_type === 'week_complete'){
+      completed.push(parseInt(obj.week));
+    }
+  }
+  return {entries, completed};
+}
+
+document.getElementById('export-csv').addEventListener('click', async ()=>{
+  const entries = await loadEntries();
+  const completed = await loadCompleted();
+  const csv = toCSV(entries, completed);
+  const blob = new Blob([csv], {type:'text/csv'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = '10k-training-log.csv';
+  a.click();
+  URL.revokeObjectURL(url);
+});
+
+document.getElementById('import-csv').addEventListener('change', async (e)=>{
+  const file = e.target.files[0];
+  if(!file) return;
+  try{
+    const text = await file.text();
+    const {entries, completed} = fromCSV(text);
+    await saveEntries(entries);
+    await saveCompleted(completed);
+    completedWeeks = completed;
+    await renderPlan();
+    await refreshLog();
+    alert('Imported '+entries.length+' runs and '+completed.length+' completed weeks. This replaced what was on this device.');
+  }catch(err){
+    alert('Could not read that file — make sure it is a CSV exported from this tracker.');
+  }
+  e.target.value = '';
+});
 
 document.getElementById('submit-entry').addEventListener('click', async ()=>{
   const week = document.getElementById('f-week').value;
